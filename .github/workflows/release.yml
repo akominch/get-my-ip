@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unit tests
+        run: swift test
+
+      - name: Build and pack
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="$VERSION" ZIP=1 ./build.sh
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" build/GetMyIP-*.zip build/GetMyIP-*.zip.sha256 \
+            --title "GetMyIP ${GITHUB_REF_NAME#v}" --generate-notes --verify-tag
